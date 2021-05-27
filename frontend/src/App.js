@@ -2,6 +2,7 @@ import React, { Component } from "react";
 import { AiFillDelete } from 'react-icons/ai';
 import { AiFillEdit } from 'react-icons/ai';
 import { MdAdd } from 'react-icons/md';
+import { AiOutlineCheck } from 'react-icons/ai';
 import axios from "axios";
 // import logo from './logo.svg';
 import './App.css';
@@ -36,6 +37,7 @@ class App extends Component {
       view: 'All',
       todoList: [],
       activeItem: {
+        id: null,
         title: "",
         complete: false,
       },
@@ -64,6 +66,10 @@ class App extends Component {
     this.setState({ activeItem });
   }
 
+  handleViewChange = (e) => {
+    this.setState({view: e.target.value});
+  }
+
   handleNewItemChange = (e) => {
     let { name, value } = e.target;
 
@@ -81,6 +87,12 @@ class App extends Component {
     axios.post("/items/", this.state.activeItem).then((res => this.refreshList()));
   }
 
+  editItem = () => {
+    console.log(this.state.activeItem);
+    const url = "/items/" + this.state.activeItem.id + "/";
+    axios.post(url, this.state.activeItem).then((res) => this.refreshList());
+  }
+
   submitNewItem = (e) => {
     this.setState({ activeItem: this.state.newItem });
     this.submitItem();
@@ -89,6 +101,12 @@ class App extends Component {
   handleKeyPress = (event) => {
     if(event.key === 'Enter') {
       this.submitNewItem(event);
+    }
+  };
+
+  handleEditKeyPress = (event) => {
+    if(event.key === 'Enter') {
+      this.editItem();
     }
   };
 
@@ -105,16 +123,76 @@ class App extends Component {
     axios.post(url, newItem).then((res) => this.refreshList());
   };
 
+  setActiveItem = (item) => {
+    this.setState({ activeItem: item });
+  }
+
+  renderActiveItem = (item) => {
+    const isActive = item.id === this.state.activeItem.id;
+    if (isActive) {
+      return (
+        // <li class="list-group-item">
+        <div>
+        <input id={item.id} type="checkbox" checked={item.complete} onChange={() => this.handleCheckboxChange(item)} class="mr-2 mt-1" />
+        <label for={item.id}>
+        <form onSubmit={this.editItem}>
+          <div class="input-group input-group-sm">
+            <input name='title' type="text" value={this.state.activeItem.title} class="form-control" onKeyPress={this.handleEditKeyPress} onChange={this.handleChange} placeholder="Add Item" />
+          </div>
+        </form>
+        </label>
+        <AiOutlineCheck class="text-success" onClick={() => this.editItem()} style={floatRight} />
+        </div>
+        // </li>
+
+
+      );
+    }
+    return (
+      // <li class="list-group-item">
+      <div>
+      <input id={item.id} type="checkbox" checked={item.complete} onChange={() => this.handleCheckboxChange(item)} class="mr-2 mt-1" />
+      <label for={item.id}>
+        {item.title}
+      </label>
+      <AiFillDelete class="text-danger" onClick={() => this.deleteItem(item)} style={floatRight}/>
+      <AiFillEdit class="text-primary" onClick={() => this.setActiveItem(item)} style={floatRight} />
+      </div>
+      // </li>
+    )
+  }
+
   renderItems = () => {
-    const items = this.state.todoList
+    var items;
+
+    console.log(this.state.view);
+
+    if (this.state.view === 'All') {
+      items = this.state.todoList;
+    } else if (this.state.view === 'Pending') {
+      items = this.state.todoList.filter(
+        (item) => item.complete == false
+      );
+    } else {
+      items = this.state.todoList.filter(
+        (item) => item.complete == true
+      );
+    }
+    // const items = this.state.todoList
+
 
     return items.map((item) => (
       <li class="list-group-item">
-        <input id={item.id} type="checkbox" checked={item.complete} onChange={() => this.handleCheckboxChange(item)} class="mr-2 mt-1" />
-        <label for={item.id}>{ item.title }</label>
-        <AiFillDelete class="text-danger" onClick={() => this.deleteItem(item)} style={floatRight}/>
-        <AiFillEdit class="text-primary" style={floatRight} />
+      {this.renderActiveItem(item)}
       </li>
+      // <li class="list-group-item">
+      //   <input id={item.id} type="checkbox" checked={item.complete} onChange={() => this.handleCheckboxChange(item)} class="mr-2 mt-1" />
+      //   <label for={item.id}>
+      //   { this.renderActiveItem(item) }
+      //   </label>
+      //   <AiFillDelete class="text-danger" onClick={() => this.deleteItem(item)} style={floatRight}/>
+      //   <AiFillEdit class="text-primary" onClick={() => this.setActiveItem(item)} style={floatRight} />
+      // </li>
     ));
   };
 
@@ -124,10 +202,10 @@ class App extends Component {
     return (
       <section class="my-2" style={sectionStyle}>
         <h1 class="text-center">To Do List</h1>
-        <select class="form-select form-select-sm" aria-label=".form-select-sm example" style={selectStyle}>
-          <option selected>All</option>
-          <option value="1">Pending</option>
-          <option value="2">Completed</option>
+        <select class="form-select form-select-sm" aria-label=".form-select-sm example" value={this.state.view} onChange={this.handleViewChange} style={selectStyle}>
+          <option value="All">All</option>
+          <option value="Pending">Pending</option>
+          <option value="Completed">Completed</option>
         </select>
         <br />
         <div class="card start-50 translate-middle-x mt-4">
